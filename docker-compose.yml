@@ -1,0 +1,17 @@
+version: "3.9"  # optional since v1.27.0
+
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: amonycoffemis-app
+    ports:
+      - "7208:80"
+    
+  db:
+    image: keinos/sqlite3
+    container_name: amonycoffemis-db
+    ports: # not actually needed, because the two services are on the same network
+      - "3234:3234" 
+    tty: true
