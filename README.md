@@ -4,7 +4,7 @@ Languages used: C#
 
 Web framework: .NET 7
 
-To run this project, do the following:
+To run this project, do The following:
 
 Download .NET 7 SDK here - https://dotnet.microsoft.com/en-us/download/dotnet/7.0
 

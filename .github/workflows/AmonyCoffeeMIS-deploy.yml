@@ -1,8 +1,10 @@
 name: 
 
 on:
-  pull_request:
-    branches: [master]
+  push:
+    branches:
+    - master
+    - docker-b
 
 env:    
       
