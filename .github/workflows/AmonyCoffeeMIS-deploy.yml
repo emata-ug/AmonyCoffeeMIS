@@ -3,6 +3,8 @@ name:
 on:
   pull_request:
     branches: [master]
+
+env:    
       
 jobs:
   build-project: 
@@ -55,7 +57,7 @@ jobs:
             token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
         
         - name: Build container image
-          run: docker build -t ${{ secrets.REGISTRY_NAME }}/amonycoffeemis:${{ needs.image-tag.outputs.build_id }} .
+          run: docker build -t ${{ secrets.REGISTRY_NAME }}/amony-coffee-mis:${{ needs.image-tag.outputs.build_id }} .
           
         - name: Log in to DigitalOcean Container Registry with short-lived credentials
           run: doctl registry login --expiry-seconds 1200
