@@ -1,0 +1,90 @@
+name: 
+
+on:
+  pull_request:
+    branches: [master]
+      
+jobs:
+  build-project: 
+    name: Build AmonyCoffeeMIS 
+    runs-on: ubuntu-latest
+    defaults:
+        run:
+          working-directory: src
+    steps:
+       - name: Checkout code
+         uses: actions/checkout@v4
+
+       - name: Setup dotnet
+         uses: actions/setup-dotnet@v3
+         with:
+             dotnet-version: '7.0.x'
+
+       - name: Install dependencies
+         run: dotnet restore
+
+       - name: Build
+         run: dotnet build     
+         continue-on-error: false
+
+  image-tag:
+    name: create image tag
+    runs-on: ubuntu-latest
+    outputs:
+      build_id: ${{ steps.prep.outputs.build_id }} # build id
+      datetime: ${{ steps.prep.outputs.datetime }} # build date
+    steps:
+      - name: generate build ID
+        id: prep
+        run: |
+          sha=${GITHUB_SHA::8}
+          timestamp=$(date +%s)
+          datetime=$(date)
+          echo "build_id=stage-${sha}-${timestamp}" >>$GITHUB_OUTPUT
+          echo "datetime=${datetime}" >>$GITHUB_OUTPUT       
+
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+
+        - name: Install doctl
+          uses: digitalocean/action-doctl@v2
+          with:
+            token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        
+        - name: Build container image
+          run: docker build -t ${{ secrets.REGISTRY_NAME }}/amonycoffeemis:${{ needs.image-tag.outputs.build_id }} .
+          
+        - name: Log in to DigitalOcean Container Registry with short-lived credentials
+          run: doctl registry login --expiry-seconds 1200
+
+        - name: Remove all old images
+          run: if [ ! -z "$(doctl registry repository list | grep "amonycoffeemis")" ]; then doctl registry repository delete-manifest amonycoffeemis $(doctl registry repository list-tags amonycoffeemis | grep -o "sha.*") --force; else echo "No repository"; fi  
+          
+        - name: Push image to DigitalOcean Container Registry
+          run: docker push ${{ secrets.REGISTRY_NAME }}/amonycoffeemis:${{ needs.image-tag.outputs.build_id }}
+    
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - name: Deploy to Digital Ocean droplet via SSH action
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          script: |
+            # Login to registry
+            docker login -u ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} -p ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} registry.digitalocean.com
+            # Stop running container
+            docker stop amonycoffeemis
+            # Remove old container
+            docker rm amonycoffeemis
+            # Run a new container from a new image
+            docker run -d \
+            --restart always \
+            --name amonycoffeemis \
+            ${{ secrets.REGISTRY_NAME }}/amonycoffeemis:${{ needs.image-tag.outputs.build_id }}      
