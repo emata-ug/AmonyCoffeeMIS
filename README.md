@@ -37,4 +37,18 @@ Access the application on this URL: https://localhost:7208/
 
 
 
+Install Docker Compose.
+
+Clone the repository to your local machine.
+
+Navigate to the directory where you cloned the repository.
+
+Run the following command to build the Docker image:
+   docker-compose build
+
+Run the following command to start the application:
+   docker-compose up
+
+The application will be accessible at http://localhost:80.
+
 
